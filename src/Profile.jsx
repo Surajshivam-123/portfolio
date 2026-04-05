@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 const GITHUB_USER = "Surajshivam-123";
 const LEETCODE_USER = "Surajshivam";
 const CF_USER = "s_u_r_a_j";
+const CODECHEF_USER = "skumar919810";
 
 const USE_CORS_PROXY = true;
 const CORS_PROXY = "https://corsproxy.io/?";
@@ -39,7 +40,8 @@ export default function Profile() {
   const [github, setGithub] = useState(null);
   const [leetcode, setLeetcode] = useState(null);
   const [codeforces, setCodeforces] = useState(null);
-  const [loadingStates, setLoadingStates] = useState({ github: true, leetcode: true, codeforces: true });
+  const [codechef, setCodechef] = useState(null);
+  const [loadingStates, setLoadingStates] = useState({ github: true, leetcode: true, codeforces: true, codechef: true });
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -107,6 +109,12 @@ export default function Profile() {
       .then((d) => { if (d.status === "OK") setCodeforces(d.result[0]); })
       .catch(() => setCodeforces({ error: true }))
       .finally(() => setLoadingStates((s) => ({ ...s, codeforces: false })));
+
+    fetch(`https://cp-rating-api.vercel.app/codechef/${CODECHEF_USER}`)
+      .then((r) => r.json())
+      .then((d) => setCodechef(d))
+      .catch(() => setCodechef({ error: true }))
+      .finally(() => setLoadingStates((s) => ({ ...s, codechef: false })));
   }, []);
 
   const cursor = tick % 2 === 0 ? "█" : " ";
@@ -134,12 +142,13 @@ export default function Profile() {
     github:     { color: "#39ff14", shadow: "#39ff1422", glow: "#39ff1444" },
     leetcode:   { color: "#ffa500", shadow: "#ffa50018", glow: "#ffa50033" },
     codeforces: { color: "#00d4ff", shadow: "#00d4ff18", glow: "#00d4ff33" },
+    codechef:   { color: "#ff6b35", shadow: "#ff6b3518", glow: "#ff6b3533" },
   };
 
   const Card = ({ platform, title, username, children }) => {
     const { color, shadow, glow } = platforms[platform];
     const isLoading = loadingStates[platform];
-    const icons = { github: "⬡", leetcode: "◈", codeforces: "◉" };
+    const icons = { github: "⬡", leetcode: "◈", codeforces: "◉", codechef: "◆" };
     const [hovered, setHovered] = useState(false);
 
     return (
@@ -183,7 +192,7 @@ export default function Profile() {
             </span>
           </div>
           <a
-            href={`https://${platform === "codeforces" ? "codeforces.com/profile/" + username : platform === "github" ? "github.com/" + username : "leetcode.com/u/" + username}`}
+            href={`https://${platform === "codeforces" ? "codeforces.com/profile/" + username : platform === "github" ? "github.com/" + username : platform === "codechef" ? "codechef.com/users/" + username : "leetcode.com/u/" + username}`}
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: "#1d5533", ...mono, fontSize: 11, letterSpacing: 1, textDecoration: "none", transition: "color 0.2s" }}
@@ -241,7 +250,7 @@ export default function Profile() {
           </div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 14, background: "rgba(0,255,65,0.03)", border: "1px solid #0a2a16", borderRadius: 4, padding: "8px 20px", fontFamily: "monospace", color: "#0d3a1a", fontSize: 10, letterSpacing: 2 }}>
             <span style={{ color: "#00cc44" }}>●</span>
-            3 MODULES ACTIVE · DATA SYNC ENABLED {cursor}
+            4 MODULES ACTIVE · DATA SYNC ENABLED {cursor}
           </div>
         </div>
 
@@ -303,6 +312,20 @@ export default function Profile() {
             )}
           </Card>
 
+          {/* CODECHEF */}
+          <Card platform="codechef" title="CODECHEF" username={CODECHEF_USER}>
+            {codechef && !codechef.error ? (<>
+              <StatRow label="RATING"        value={codechef.rating}                        color="#ff6b35" />
+              <StatRow label="STARS"         value={codechef.stars ? `${"★".repeat(codechef.stars)}` : "—"} color="#ffcc00" />
+              <StatRow label="GLOBAL_RANK"   value={codechef.globalRank  ? `#${codechef.globalRank}`  : "—"} color="#ff6b35" />
+              <StatRow label="COUNTRY_RANK"  value={codechef.countryRank ? `#${codechef.countryRank}` : "—"} />
+              <StatRow label="CONTESTS"      value={codechef.participation ?? "—"} />
+              <StatRow label="COUNTRY"       value={codechef.country ?? "—"} />
+            </>) : !loadingStates.codechef && (
+              <div style={{ color: "#ff6b35aa", fontFamily: "monospace", fontSize: 12, padding: "16px 0" }}>⚠ API UNAVAILABLE</div>
+            )}
+          </Card>
+
         </div>
 
         {/* Footer */}
@@ -311,7 +334,7 @@ export default function Profile() {
           <div style={{ color: "#112a18", marginTop: 8 }}>
             ALL SYSTEMS NOMINAL · {new Date().getFullYear()} {cursor}
           </div>
-          <div style={{ color: "#0a1e10", marginTop: 3 }}>POWERED BY GITHUB · LEETCODE · CODEFORCES APIS</div>
+          <div style={{ color: "#0a1e10", marginTop: 3 }}>POWERED BY GITHUB · LEETCODE · CODEFORCES · CODECHEF APIS</div>
         </div>
       </div>
     </div>
