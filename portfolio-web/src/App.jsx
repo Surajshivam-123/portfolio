@@ -89,7 +89,7 @@ const projects = [
     description:
       "A Web app to manage events where you can manage college events like sports, cultural events and more via separate invitation code for members and participants.",
     tech: ["React", "Node.js", "MongoDB","Redis","Web-Socket","Google Auth"],
-    link: "https://surajshivam-123.github.io/Campus-Sphere/",
+    link: "https://campus-sphere-liard.vercel.app/",
   },
 ];
 
