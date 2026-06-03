@@ -309,7 +309,7 @@ export default function App() {
               </p>
             </div>
               <div className="stat-box">
-                <div className="stat-num">500+</div>
+                <div className="stat-num">600+</div>
                 <div className="stat-label">Problems Solved on all Platforms</div>
               </div>
           </div>
