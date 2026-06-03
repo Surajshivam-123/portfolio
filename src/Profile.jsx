@@ -110,11 +110,8 @@ export default function Profile() {
       .catch(() => setCodeforces({ error: true }))
       .finally(() => setLoadingStates((s) => ({ ...s, codeforces: false })));
 
-    fetch(`https://cp-rating-api.vercel.app/codechef/${CODECHEF_USER}`)
-      .then((r) => r.json())
-      .then((d) => setCodechef(d))
-      .catch(() => setCodechef({ error: true }))
-      .finally(() => setLoadingStates((s) => ({ ...s, codechef: false })));
+    setCodechef({ rating: 1656, stars: 3 });
+    setLoadingStates((s) => ({ ...s, codechef: false }));
   }, []);
 
   const cursor = tick % 2 === 0 ? "█" : " ";
@@ -334,7 +331,7 @@ export default function Profile() {
           <div style={{ color: "#112a18", marginTop: 8 }}>
             ALL SYSTEMS NOMINAL · {new Date().getFullYear()} {cursor}
           </div>
-          <div style={{ color: "#0a1e10", marginTop: 3 }}>POWERED BY GITHUB · LEETCODE · CODEFORCES · CODECHEF APIS</div>
+          <div style={{ color: "#0a1e10", marginTop: 3 }}>POWERED BY GITHUB · LEETCODE · CODEFORCES APIS</div>
         </div>
       </div>
     </div>
