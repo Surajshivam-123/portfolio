@@ -232,6 +232,7 @@ export default function App() {
   return (
     <>
       <div className="mesh-bg" />
+      <ThreeCanvas />
 
       {/* NAV */}
       <nav className={scrolled ? "scrolled" : ""}>
@@ -275,7 +276,6 @@ export default function App() {
 
       {/* HERO */}
       <section id="hero" ref={heroRef}>
-        <ThreeCanvas />
         <div className={`hero${heroInView ? " section-visible" : ""}`}>
           <div className="hero-inner">
             <div className="hero-badge">

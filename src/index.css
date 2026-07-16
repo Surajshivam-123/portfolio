@@ -1021,7 +1021,7 @@ section {
    CONTACT
 ═══════════════════ */
 .contact-section {
-  background: var(--bg);
+  background: transparent;
   position: relative;
   z-index: 10;
   padding: 8rem 0 4rem;
