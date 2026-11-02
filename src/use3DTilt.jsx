@@ -1,17 +1,10 @@
-import { useRef, useEffect } from "react";
+import React, { useRef, useEffect } from "react";
 
 /**
  * React hook to apply a hardware-accelerated 3D tilt effect on elements when hovered.
  * Automatically adds a dynamic glare overlay that follows the mouse.
- * 
- * @param {Object} options Configuration parameters for the tilt
- * @param {number} options.maxTilt Max tilt in degrees (default: 8)
- * @param {number} options.perspective Perspective intensity in px (default: 1000)
- * @param {number} options.scale Scaling factor on hover (default: 1.02)
- * @param {number} options.speed Transition speed in ms on enter/exit (default: 400)
- * @param {number} options.glareOpacity Max opacity of the gloss glare (default: 0.1)
  */
-export default function use3DTilt(options = {}) {
+function use3DTilt(options = {}) {
   const elementRef = useRef(null);
   const glareRef = useRef(null);
 
@@ -46,7 +39,6 @@ export default function use3DTilt(options = {}) {
         borderRadius: "inherit",
       });
       
-      // Ensure container has relative positioning for the absolute glare overlay
       const currentPos = window.getComputedStyle(el).position;
       if (currentPos === "static") {
         el.style.position = "relative";
@@ -64,18 +56,14 @@ export default function use3DTilt(options = {}) {
       const width = rect.width;
       const height = rect.height;
 
-      // Normalize mouse coordinates to a range of [-0.5, 0.5]
       const normX = (x / width) - 0.5;
       const normY = (y / height) - 0.5;
 
-      // Calculate tilt rotation
       const tiltX = -normY * maxTilt;
       const tiltY = normX * maxTilt;
 
-      // Apply transformations
       el.style.transform = `perspective(${perspective}px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(${scale}, ${scale}, ${scale})`;
 
-      // Dynamic glare tracking cursor
       const glarePercentX = (x / width) * 100;
       const glarePercentY = (y / height) * 100;
       glare.style.backgroundImage = `radial-gradient(circle at ${glarePercentX}% ${glarePercentY}%, rgba(255, 255, 255, ${glareOpacity}) 0%, transparent 60%)`;
@@ -83,11 +71,9 @@ export default function use3DTilt(options = {}) {
     };
 
     const handleMouseEnter = () => {
-      // Temporary transition to smoothly animate into the tilted state
       el.style.transition = `transform ${speed}ms cubic-bezier(0.22, 1, 0.36, 1)`;
       glare.style.transition = `opacity ${speed}ms cubic-bezier(0.22, 1, 0.36, 1)`;
       
-      // Remove transitions during active tracking for instant responsive feedback
       setTimeout(() => {
         if (el.style.transform !== "") {
           el.style.transition = "none";
@@ -97,7 +83,6 @@ export default function use3DTilt(options = {}) {
     };
 
     const handleMouseLeave = () => {
-      // Re-enable smooth transition and animate back to center
       el.style.transition = `transform ${speed}ms cubic-bezier(0.22, 1, 0.36, 1)`;
       el.style.transform = `perspective(${perspective}px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
       
@@ -125,11 +110,9 @@ export default function use3DTilt(options = {}) {
 /**
  * A handy React wrapper component that applies the 3D tilt ref internally.
  */
-export function Tilt({ children, className, style, options, as: Component = "div", ...props }) {
+export function Tilt({ children, className, style, options, as = "div", ...props }) {
   const ref = use3DTilt(options);
-  return (
-    <Component ref={ref} className={className} style={style} {...props}>
-      {children}
-    </Component>
-  );
+  return React.createElement(as, { ref, className, style, ...props }, children);
 }
+
+export default Tilt;
