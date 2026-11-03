@@ -313,9 +313,9 @@ export default function App() {
     { href: "#hero", label: "Home" },
     { href: "#about", label: "About" },
     { href: "#projects", label: "Projects" },
+    { href: "#profile", label: "Profile" },
     { href: "#experience", label: "Experience" },
     { href: "#skills", label: "Skills" },
-    { href: "#profile", label: "Profile" },
   ];
 
   const [heroRef, heroInView] = useInView(0.08);
@@ -478,6 +478,16 @@ export default function App() {
 
       <div className="section-divider" />
 
+      {/* CODING PROFILES */}
+      <section id="profile" className="relative bg-transparent overflow-hidden">
+        <span id="coding" className="absolute -top-24" />
+        <div className="relative z-10">
+          <Profile />
+        </div>
+      </section>
+
+      <div className="section-divider" />
+
       {/* WORK EXPERIENCE & OPEN SOURCE */}
       <Experience />
 
@@ -485,15 +495,6 @@ export default function App() {
 
       {/* TECHNICAL SKILLS */}
       <TechnicalSkills />
-
-      <div className="section-divider" />
-
-      {/* PROFILE */}
-      <section id="profile" className="relative bg-transparent overflow-hidden">
-        <div className="relative z-10">
-          <Profile />
-        </div>
-      </section>
 
       {/* MODERN FOOTER */}
       <Footer />
