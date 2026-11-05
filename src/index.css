@@ -241,6 +241,10 @@ nav.scrolled {
   }
 }
 
+.pr-dropdown-content {
+  animation: slideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 .mobile-nav a {
   color: var(--text);
   text-decoration: none;

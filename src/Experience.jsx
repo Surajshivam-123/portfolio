@@ -12,6 +12,9 @@ import {
   CheckCircle2,
   Clock,
   CircleDot,
+  ChevronDown,
+  Filter,
+  Layers,
 } from "lucide-react";
 import { Tilt } from "./use3DTilt.jsx";
 import useInView from "./useInView.js";
@@ -560,6 +563,54 @@ export default function Experience() {
 
   const [ref, inView] = useInView(0.08);
 
+  // Dropdown & Filter State for Pull Requests & Issues
+  const [prFilter, setPrFilter] = useState("all"); // "all" | "merged" | "review"
+  const [openDropdowns, setOpenDropdowns] = useState({});
+
+  const toggleDropdown = useCallback((key) => {
+    setOpenDropdowns((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  }, []);
+
+  const handleFilterChange = useCallback((filter) => {
+    setPrFilter(filter);
+    if (filter === "merged") {
+      setOpenDropdowns((prev) => {
+        const next = { ...prev };
+        EXPERIENCES_METADATA.forEach((exp) => {
+          next[`${exp.id}-merged`] = true;
+        });
+        return next;
+      });
+    } else if (filter === "review") {
+      setOpenDropdowns((prev) => {
+        const next = { ...prev };
+        EXPERIENCES_METADATA.forEach((exp) => {
+          next[`${exp.id}-review`] = true;
+        });
+        return next;
+      });
+    }
+  }, []);
+
+  const areAnyOpen = Object.values(openDropdowns).some(Boolean);
+
+  const toggleAll = useCallback(() => {
+    if (areAnyOpen) {
+      setOpenDropdowns({});
+    } else {
+      const allOpen = {};
+      EXPERIENCES_METADATA.forEach((exp) => {
+        allOpen[`${exp.id}-merged`] = true;
+        allOpen[`${exp.id}-review`] = true;
+        allOpen[`${exp.id}-issues`] = true;
+      });
+      setOpenDropdowns(allOpen);
+    }
+  }, [areAnyOpen]);
+
   return (
     <section id="experience" className="relative bg-transparent overflow-hidden">
       <div ref={ref} className={`max-w-5xl mx-auto px-4 sm:px-6 relative z-10 section-wrapper${inView ? " section-visible" : ""}`}>
@@ -619,6 +670,51 @@ export default function Experience() {
           </div>
         </div>
 
+        {/* Quick Controls: Filter PRs Dropdown & Expand/Collapse All */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6 px-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-mono text-slate-400 flex items-center gap-1.5">
+              <Filter size={13} className="text-cyan-400" />
+              <span>PR Filter:</span>
+            </span>
+
+            {/* Dropdown Selector */}
+            <div className="relative">
+              <select
+                value={prFilter}
+                onChange={(e) => handleFilterChange(e.target.value)}
+                aria-label="Filter Pull Requests"
+                className="appearance-none font-mono text-xs bg-[#0e131f] text-cyan-300 border border-slate-700/80 rounded-lg pl-3 pr-8 py-1.5 hover:border-cyan-500/50 focus:outline-none focus:border-cyan-400 cursor-pointer shadow-sm transition-colors"
+              >
+                <option value="all" className="bg-[#0e131f] text-slate-200">
+                  All Pull Requests ({totalMerged + totalReview})
+                </option>
+                <option value="merged" className="bg-[#0e131f] text-purple-300">
+                  Merged PRs Only ({totalMerged})
+                </option>
+                <option value="review" className="bg-[#0e131f] text-cyan-300">
+                  In Review PRs Only ({totalReview})
+                </option>
+              </select>
+              <ChevronDown
+                size={13}
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs text-slate-300 bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/60 hover:border-slate-600 transition-colors cursor-pointer"
+            >
+              <Layers size={13} className="text-cyan-400" />
+              <span>{areAnyOpen ? "Collapse All PRs" : "Expand All PRs"}</span>
+            </button>
+          </div>
+        </div>
+
         {/* 3 Pure Data Project Cards */}
         <div className="space-y-6">
           {EXPERIENCES_METADATA.map((exp) => {
@@ -632,8 +728,18 @@ export default function Experience() {
               typeof rawIssues === "number"
                 ? { total: rawIssues, open: 0, closed: 0, items: [] }
                 : rawIssues || { total: 0, open: 0, closed: 0, items: [] };
-            const mergedCount = validPRs.filter((p) => p.statusType === "merged").length;
-            const reviewCount = validPRs.filter((p) => p.statusType === "review").length;
+
+            const mergedPRs = validPRs.filter((p) => p.statusType === "merged");
+            const reviewPRs = validPRs.filter((p) => p.statusType === "review");
+            const mergedCount = mergedPRs.length;
+            const reviewCount = reviewPRs.length;
+
+            const isMergedOpen = !!openDropdowns[`${exp.id}-merged`];
+            const isReviewOpen = !!openDropdowns[`${exp.id}-review`];
+            const isIssuesOpen = !!openDropdowns[`${exp.id}-issues`];
+
+            const showMerged = (prFilter === "all" || prFilter === "merged") && mergedCount > 0;
+            const showReview = (prFilter === "all" || prFilter === "review") && reviewCount > 0;
 
             return (
               <Tilt
@@ -713,129 +819,317 @@ export default function Experience() {
 
                     <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
                       {mergedCount > 0 && (
-                        <span className="text-purple-300 bg-purple-950/60 border border-purple-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => toggleDropdown(`${exp.id}-merged`)}
+                          title={`${isMergedOpen ? "Collapse" : "Expand"} Merged PRs`}
+                          className={`text-purple-300 bg-purple-950/60 border ${
+                            isMergedOpen
+                              ? "border-purple-400 ring-1 ring-purple-400/50 bg-purple-900/40"
+                              : "border-purple-500/40 hover:border-purple-400"
+                          } px-2.5 py-0.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer`}
+                        >
                           <GitMerge size={11} className="text-purple-400" />
-                          {mergedCount} Merged
-                        </span>
+                          <span>{mergedCount} Merged</span>
+                          <ChevronDown
+                            size={11}
+                            className={`transition-transform duration-200 ${
+                              isMergedOpen ? "rotate-180 text-purple-300" : "text-purple-400"
+                            }`}
+                          />
+                        </button>
                       )}
                       {reviewCount > 0 && (
-                        <span className="text-cyan-300 bg-cyan-950/60 border border-cyan-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                          <GitPullRequest size={11} className="text-cyan-400 animate-pulse" />
-                          {reviewCount} In Review
-                        </span>
-                      )}
-                      <span className="text-orange-300 bg-orange-950/60 border border-orange-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        <CircleDot size={11} className="text-orange-400" />
-                        {issuesStats.total} Issues Raised
-                        {issuesStats.total > 0 && ` (${issuesStats.open} Open · ${issuesStats.closed} Closed)`}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    {validPRs.map((pr) => (
-                      <div
-                        key={pr.number}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-800/70 hover:border-slate-700/90 transition-all duration-200"
-                      >
-                        <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
-                          {/* Status Badge: Merged or In Review */}
-                          {pr.statusType === "merged" ? (
-                            <span className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold px-2 py-0.5 rounded-md shrink-0 bg-purple-950/70 border border-purple-500/40 text-purple-300">
-                              <GitMerge size={12} className="text-purple-400" />
-                              Merged
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold px-2 py-0.5 rounded-md shrink-0 bg-cyan-950/70 border border-cyan-500/40 text-cyan-300">
-                              <GitPullRequest size={12} className="text-cyan-400 animate-pulse" />
-                              In Review
-                            </span>
-                          )}
-
-                          {/* PR Title & Number */}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline gap-2">
-                              <span className="font-mono text-xs sm:text-sm font-bold text-white shrink-0">
-                                #{pr.number}:
-                              </span>
-                              <span className="font-mono text-xs sm:text-sm text-slate-200 truncate">
-                                {pr.title}
-                              </span>
-                            </div>
-                            {pr.mergedAt && (
-                              <div className="font-mono text-[10px] text-purple-400/80 mt-0.5 flex items-center gap-1">
-                                <CheckCircle2 size={10} className="text-purple-400" />
-                                <span>Merged on {formatDate(pr.mergedAt)}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Direct PR Link */}
-                        <a
-                          href={pr.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-md bg-slate-800/40 border border-slate-700/40 hover:border-slate-600 transition-colors shrink-0 sm:self-center group/pr"
+                        <button
+                          type="button"
+                          onClick={() => toggleDropdown(`${exp.id}-review`)}
+                          title={`${isReviewOpen ? "Collapse" : "Expand"} In Review PRs`}
+                          className={`text-cyan-300 bg-cyan-950/60 border ${
+                            isReviewOpen
+                              ? "border-cyan-400 ring-1 ring-cyan-400/50 bg-cyan-900/40"
+                              : "border-cyan-500/40 hover:border-cyan-400"
+                          } px-2.5 py-0.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer`}
                         >
-                          <span className="group-hover/pr:underline">Inspect PR</span>
-                          <ExternalLink size={12} className="text-slate-500 group-hover/pr:text-cyan-400 transition-colors" />
-                        </a>
-                      </div>
-                    ))}
+                          <GitPullRequest size={11} className="text-cyan-400 animate-pulse" />
+                          <span>{reviewCount} In Review</span>
+                          <ChevronDown
+                            size={11}
+                            className={`transition-transform duration-200 ${
+                              isReviewOpen ? "rotate-180 text-cyan-300" : "text-cyan-400"
+                            }`}
+                          />
+                        </button>
+                      )}
+                      {issuesStats.total > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleDropdown(`${exp.id}-issues`)}
+                          title={`${isIssuesOpen ? "Collapse" : "Expand"} Key Issues`}
+                          className={`text-orange-300 bg-orange-950/60 border ${
+                            isIssuesOpen
+                              ? "border-orange-400 ring-1 ring-orange-400/50 bg-orange-900/40"
+                              : "border-orange-500/40 hover:border-orange-400"
+                          } px-2.5 py-0.5 rounded-full flex items-center gap-1.5 transition-all cursor-pointer`}
+                        >
+                          <CircleDot size={11} className="text-orange-400" />
+                          <span>{issuesStats.total} Issues Raised</span>
+                          <ChevronDown
+                            size={11}
+                            className={`transition-transform duration-200 ${
+                              isIssuesOpen ? "rotate-180 text-orange-300" : "text-orange-400"
+                            }`}
+                          />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Issues Authored & Reported by Author (both Open and Closed) */}
-                  {issuesStats.items && issuesStats.items.length > 0 && (
-                    <div className="pt-3 border-t border-slate-800/80 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-mono text-slate-400 font-semibold pb-1">
-                        <span className="flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                          <CircleDot size={12} className="text-orange-400" />
-                          Key Issues Authored ({issuesStats.total} Total)
-                        </span>
-                        <span className="text-[10px] text-slate-500 font-mono">
-                          {issuesStats.open} Open · {issuesStats.closed} Closed
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {issuesStats.items.map((issue) => (
-                          <div
-                            key={issue.number}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 rounded-lg bg-slate-900/40 border border-slate-800/60 hover:border-slate-700/80 transition-all duration-200"
-                          >
-                            <div className="flex items-start sm:items-center gap-2 min-w-0 flex-1">
-                              {issue.state === "closed" ? (
-                                <span className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 bg-purple-950/60 border border-purple-500/40 text-purple-300">
-                                  <CheckCircle2 size={11} className="text-purple-400" />
-                                  Closed
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 bg-emerald-950/60 border border-emerald-500/40 text-emerald-300">
-                                  <CircleDot size={11} className="text-emerald-400" />
-                                  Open
-                                </span>
-                              )}
-                              <span className="font-mono text-xs font-bold text-white shrink-0">
-                                #{issue.number}:
-                              </span>
-                              <span className="font-mono text-xs text-slate-300 truncate">
-                                {issue.title}
-                              </span>
-                            </div>
-                            <a
-                              href={issue.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] font-mono text-cyan-400 hover:text-cyan-300 hover:underline shrink-0"
-                            >
-                              <span>View Issue</span>
-                              <ExternalLink size={11} />
-                            </a>
+                  {/* Dropdowns for Merged PRs, In Review PRs, and Issues */}
+                  <div className="space-y-3">
+                    {/* Merged PRs Dropdown */}
+                    {showMerged && (
+                      <div className="rounded-xl border border-purple-500/30 bg-purple-950/15 overflow-hidden transition-all duration-200">
+                        <button
+                          type="button"
+                          onClick={() => toggleDropdown(`${exp.id}-merged`)}
+                          aria-expanded={isMergedOpen}
+                          className="w-full flex items-center justify-between p-3 sm:px-4 text-left hover:bg-purple-900/25 transition-colors cursor-pointer group/prtoggle"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="p-1 rounded-md bg-purple-900/50 border border-purple-500/40 text-purple-300 group-hover/prtoggle:scale-110 transition-transform">
+                              <GitMerge size={13} />
+                            </span>
+                            <span className="font-mono text-xs font-semibold text-purple-200">
+                              Merged Pull Requests
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-500/40 text-purple-300">
+                              {mergedCount}
+                            </span>
                           </div>
-                        ))}
+
+                          <div className="flex items-center gap-2 text-xs font-mono text-purple-300/80 group-hover/prtoggle:text-purple-200 shrink-0">
+                            <span className="text-[11px] hidden sm:inline">
+                              {isMergedOpen ? "Collapse" : `View ${mergedCount} Merged PR${mergedCount > 1 ? "s" : ""}`}
+                            </span>
+                            <ChevronDown
+                              size={14}
+                              className={`transition-transform duration-300 text-purple-400 ${
+                                isMergedOpen ? "rotate-180" : ""
+                              }`}
+                            />
+                          </div>
+                        </button>
+
+                        {isMergedOpen && (
+                          <div className="p-3 sm:p-4 pt-1 space-y-2 border-t border-purple-500/20 pr-dropdown-content">
+                            {mergedPRs.map((pr) => (
+                              <div
+                                key={`${pr.number}-${pr.statusType}`}
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 hover:border-purple-500/40 transition-all duration-200"
+                              >
+                                <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+                                  <span className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold px-2 py-0.5 rounded-md shrink-0 bg-purple-950/70 border border-purple-500/40 text-purple-300">
+                                    <GitMerge size={12} className="text-purple-400" />
+                                    Merged
+                                  </span>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-baseline gap-2">
+                                      <span className="font-mono text-xs sm:text-sm font-bold text-white shrink-0">
+                                        #{pr.number}:
+                                      </span>
+                                      <span className="font-mono text-xs sm:text-sm text-slate-200 truncate">
+                                        {pr.title}
+                                      </span>
+                                    </div>
+                                    {pr.mergedAt && (
+                                      <div className="font-mono text-[10px] text-purple-400/80 mt-0.5 flex items-center gap-1">
+                                        <CheckCircle2 size={10} className="text-purple-400" />
+                                        <span>Merged on {formatDate(pr.mergedAt)}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <a
+                                  href={pr.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-md bg-slate-800/40 border border-slate-700/40 hover:border-purple-500/60 transition-colors shrink-0 sm:self-center group/pr"
+                                >
+                                  <span className="group-hover/pr:underline">Inspect PR</span>
+                                  <ExternalLink size={12} className="text-slate-500 group-hover/pr:text-purple-300 transition-colors" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    )}
+
+                    {/* In Review PRs Dropdown */}
+                    {showReview && (
+                      <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/15 overflow-hidden transition-all duration-200">
+                        <button
+                          type="button"
+                          onClick={() => toggleDropdown(`${exp.id}-review`)}
+                          aria-expanded={isReviewOpen}
+                          className="w-full flex items-center justify-between p-3 sm:px-4 text-left hover:bg-cyan-900/25 transition-colors cursor-pointer group/prtoggle"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="p-1 rounded-md bg-cyan-900/50 border border-cyan-500/40 text-cyan-300 group-hover/prtoggle:scale-110 transition-transform">
+                              <GitPullRequest size={13} className="animate-pulse" />
+                            </span>
+                            <span className="font-mono text-xs font-semibold text-cyan-200">
+                              In Review Pull Requests
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300">
+                              {reviewCount}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs font-mono text-cyan-300/80 group-hover/prtoggle:text-cyan-200 shrink-0">
+                            <span className="text-[11px] hidden sm:inline">
+                              {isReviewOpen ? "Collapse" : `View ${reviewCount} In Review PR${reviewCount > 1 ? "s" : ""}`}
+                            </span>
+                            <ChevronDown
+                              size={14}
+                              className={`transition-transform duration-300 text-cyan-400 ${
+                                isReviewOpen ? "rotate-180" : ""
+                              }`}
+                            />
+                          </div>
+                        </button>
+
+                        {isReviewOpen && (
+                          <div className="p-3 sm:p-4 pt-1 space-y-2 border-t border-cyan-500/20 pr-dropdown-content">
+                            {reviewPRs.map((pr) => (
+                              <div
+                                key={`${pr.number}-${pr.statusType}`}
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 hover:border-cyan-500/40 transition-all duration-200"
+                              >
+                                <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+                                  <span className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold px-2 py-0.5 rounded-md shrink-0 bg-cyan-950/70 border border-cyan-500/40 text-cyan-300">
+                                    <GitPullRequest size={12} className="text-cyan-400 animate-pulse" />
+                                    In Review
+                                  </span>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-baseline gap-2">
+                                      <span className="font-mono text-xs sm:text-sm font-bold text-white shrink-0">
+                                        #{pr.number}:
+                                      </span>
+                                      <span className="font-mono text-xs sm:text-sm text-slate-200 truncate">
+                                        {pr.title}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <a
+                                  href={pr.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 font-mono text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-md bg-slate-800/40 border border-slate-700/40 hover:border-cyan-500/60 transition-colors shrink-0 sm:self-center group/pr"
+                                >
+                                  <span className="group-hover/pr:underline">Inspect PR</span>
+                                  <ExternalLink size={12} className="text-slate-500 group-hover/pr:text-cyan-400 transition-colors" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Filter Empty State Notice if filtered */}
+                    {prFilter === "merged" && mergedCount === 0 && (
+                      <div className="p-3 rounded-lg bg-slate-900/40 border border-slate-800/60 text-center font-mono text-xs text-slate-500">
+                        No merged pull requests for {exp.projectName} ({reviewCount} in review)
+                      </div>
+                    )}
+                    {prFilter === "review" && reviewCount === 0 && (
+                      <div className="p-3 rounded-lg bg-slate-900/40 border border-slate-800/60 text-center font-mono text-xs text-slate-500">
+                        No in-review pull requests for {exp.projectName} ({mergedCount} merged)
+                      </div>
+                    )}
+
+                    {/* Issues Dropdown */}
+                    {issuesStats.items && issuesStats.items.length > 0 && (
+                      <div className="rounded-xl border border-orange-500/30 bg-orange-950/15 overflow-hidden transition-all duration-200">
+                        <button
+                          type="button"
+                          onClick={() => toggleDropdown(`${exp.id}-issues`)}
+                          aria-expanded={isIssuesOpen}
+                          className="w-full flex items-center justify-between p-3 sm:px-4 text-left hover:bg-orange-900/25 transition-colors cursor-pointer group/issuetoggle"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="p-1 rounded-md bg-orange-900/50 border border-orange-500/40 text-orange-300 group-hover/issuetoggle:scale-110 transition-transform">
+                              <CircleDot size={13} />
+                            </span>
+                            <span className="font-mono text-xs font-semibold text-orange-200">
+                              Key Issues Authored
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-orange-950/80 border border-orange-500/40 text-orange-300">
+                              {issuesStats.total} Total
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs font-mono text-orange-300/80 group-hover/issuetoggle:text-orange-200 shrink-0">
+                            <span className="text-[11px] hidden sm:inline">
+                              {isIssuesOpen ? "Hide" : `View ${issuesStats.items.length} Issue${issuesStats.items.length > 1 ? "s" : ""}`}
+                            </span>
+                            <ChevronDown
+                              size={14}
+                              className={`transition-transform duration-300 text-orange-400 ${
+                                isIssuesOpen ? "rotate-180" : ""
+                              }`}
+                            />
+                          </div>
+                        </button>
+
+                        {isIssuesOpen && (
+                          <div className="p-3 sm:p-4 pt-1 space-y-2 border-t border-orange-500/20 pr-dropdown-content">
+                            {issuesStats.items.map((issue) => (
+                              <div
+                                key={issue.number}
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 rounded-lg bg-slate-900/40 border border-slate-800/60 hover:border-slate-700/80 transition-all duration-200"
+                              >
+                                <div className="flex items-start sm:items-center gap-2 min-w-0 flex-1">
+                                  {issue.state === "closed" ? (
+                                    <span className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 bg-purple-950/60 border border-purple-500/40 text-purple-300">
+                                      <CheckCircle2 size={11} className="text-purple-400" />
+                                      Closed
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 bg-emerald-950/60 border border-emerald-500/40 text-emerald-300">
+                                      <CircleDot size={11} className="text-emerald-400" />
+                                      Open
+                                    </span>
+                                  )}
+                                  <span className="font-mono text-xs font-bold text-white shrink-0">
+                                    #{issue.number}:
+                                  </span>
+                                  <span className="font-mono text-xs text-slate-300 truncate">
+                                    {issue.title}
+                                  </span>
+                                </div>
+                                <a
+                                  href={issue.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[11px] font-mono text-cyan-400 hover:text-cyan-300 hover:underline shrink-0"
+                                >
+                                  <span>View Issue</span>
+                                  <ExternalLink size={11} />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* 3. Impacted Architecture & Core Files Data */}
